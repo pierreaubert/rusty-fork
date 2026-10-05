@@ -52,7 +52,7 @@ quick_error! {
         /// Spawning a subprocess failed.
         SpawnError(err: io::Error) {
             from()
-            cause(err)
+            source(err)
             display("Spawn failed: {}", err)
         }
     }
@@ -60,3 +60,22 @@ quick_error! {
 
 /// General `Result` type for rusty-fork.
 pub type Result<T> = ::std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+    use std::error::Error as StdError;
+    use std::io;
+
+    #[test]
+    #[allow(deprecated)]
+    fn spawn_error_preserves_source_and_legacy_cause() {
+        let error: Error = io::Error::new(io::ErrorKind::Other, "spawn-probe").into();
+        assert_eq!(error.to_string(), "Spawn failed: spawn-probe");
+        assert!(StdError::source(&error)
+            .unwrap()
+            .downcast_ref::<io::Error>()
+            .is_some());
+        assert_eq!(StdError::cause(&error).unwrap().to_string(), "spawn-probe");
+    }
+}
